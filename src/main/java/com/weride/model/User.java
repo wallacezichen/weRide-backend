@@ -1,6 +1,7 @@
 package com.weride.model;
 
 import java.util.Date;
+import java.util.Set;
 
 import com.weride.model.Driver;
 
@@ -40,7 +41,7 @@ public class User {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @Column(name = "email", nullable = false)
+    @Column(name = "email", nullable = false,unique = true)
     private String email;
 
     @Column(name = "address", nullable = false)
@@ -51,6 +52,9 @@ public class User {
 
     @Column(name = "password", nullable = false)
     private String password;
+
+    @Column(name = "token", nullable = false)
+    private String token;
 
     @Column(name = "gender", nullable = false)
     private Boolean gender;
@@ -63,7 +67,16 @@ public class User {
 
     @Column(name = "last_update_at_date", nullable = false)
     private Date lastUpdateAtDate;
-//
+
+    @Column(name = "accountVerified", nullable = false)
+    private Boolean accountVerified;
+
+    @OneToMany(mappedBy = "user")
+    private Set<SecureToken> tokens;
+
+
+
+
 //    @OneToOne(cascade = CascadeType.ALL)
 //    @JoinColumn(name = "fk_instructor_id", nullable = true)
 //    private Long drive_id
