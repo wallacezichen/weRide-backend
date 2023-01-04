@@ -1,10 +1,9 @@
 package com.weride.controller;
 
 import com.weride.model.User;
-import com.weride.service.MailService;
+import com.weride.repository.UserRepository;
 import com.weride.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,31 +13,43 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * port:8080
- * POST: localhost:8080/api/user-service/login
+ * port:8080 POST: localhost:8080/api/user-service/login
  */
 @RestController
 @RequestMapping("/api/user-service")
 public class UserController {
-	@Autowired
 	private final UserService userService;
+	private UserRepository userRepository;
 
-	public UserController(UserService userService) {
+	@Autowired
+	public UserController(UserService userService, UserRepository userRepository) {
 		this.userService = userService;
+		this.userRepository = userRepository;
 	}
 
 	@PostMapping("/register")
 	public ResponseEntity<String> register(@RequestBody User user) {
-		return new ResponseEntity<>("Register success", HttpStatus.OK);
+		return userService.register(user);
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<String> login(@RequestBody User user) {
-		return new ResponseEntity<>("Login success", HttpStatus.OK);
+		return userService.login(user);
 	}
 
-	@PostMapping("/verification/{code}")
-	public void activateUser(@PathVariable(value = "code") String code) {
+	@GetMapping("/resent-verification")
+	public void resentVerificationEmail(@RequestBody User user) {
+		userService.sendVerificationEmail(user);
+	}
 
+	@PostMapping("/update")
+	public ResponseEntity<String> update(@RequestBody User user) {
+		return userService.update(user);
+	}
+
+
+	@PostMapping("/verification/{code}")
+	public ResponseEntity<String> activateUser(@PathVariable(value = "code") String code) {
+		return userService.activateAccount(code);
 	}
 }

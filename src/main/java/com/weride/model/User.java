@@ -7,56 +7,57 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@AllArgsConstructor
-@Builder
-@NoArgsConstructor
+
 @Entity
+@Getter
+@Setter
 @Table(name = "user")
-
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
+	private long id;
 
-    @Column(name = "first_name", nullable = false)
-    private String firstName;
+	@Column(name = "email", nullable = false)
+	private String email;
 
-    @Column(name = "last_name", nullable = false)
-    private String lastName;
+	@Column(name = "password", nullable = false)
+	private String password;
 
-    @Column(name = "email", nullable = false)
-    private String email;
+	@Column(name = "is_activated", nullable = false)
+	private Boolean isActivated;
 
-    @Column(name = "address", nullable = false)
-    private String address;
+	@Column(name = "first_name")
+	private String firstName;
 
-    @Column(name = "phone_number", nullable = false)
-    private String phoneNumber;
-
-    @Column(name = "password", nullable = false)
-    private String password;
-
-    @Column(name = "gender", nullable = false)
-    private Boolean gender;
-
-    @Column(name = "create_date", nullable = false)
-    private Date createDate;
-
-    @Column(name = "date_of_birth", nullable = false)
-    private Date dateOfBirth;
-
-    @Column(name = "last_update_at_date", nullable = false)
-    private Date lastUpdateAtDate;
-//
-//    @OneToOne(cascade = CascadeType.ALL)
-//    @JoinColumn(name = "fk_instructor_id", nullable = true)
-//    private Long drive_id
+	@Column(name = "last_name")
+	private String lastName;
 
 
+	@Column(name = "address")
+	private String address;
+
+	@Column(name = "phone_number")
+	private String phoneNumber;
+
+	@Column(name = "gender")
+	private Boolean gender;
+
+	@Column(name = "create_date")
+	private Date createDate;
+
+	@Column(name = "date_of_birth")
+	private Date dateOfBirth;
+
+	@Column(name = "last_update_at_date")
+	private Date lastUpdateAtDate;
+
+	@Column(name = "verification_code")
+	private String verificationCode;
+
+	@Column(name = "verification_code_time")
+	private Date verificationCodeTime;
 }
