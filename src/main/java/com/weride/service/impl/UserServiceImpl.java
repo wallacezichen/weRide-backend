@@ -4,13 +4,17 @@ import com.weride.model.User;
 import com.weride.repository.UserRepository;
 import com.weride.service.MailService;
 import com.weride.service.UserService;
+import com.weride.utils.JwtUtil;
+import java.security.SecureRandom;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,6 +22,9 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 	private final MailService mailService;
 	private final UserRepository userRepository;
+
+	BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
 
 	public final int millisToSeconds = 1000;
 	public final int SecondsIn24Hours = 24 * 60 * 60;
@@ -42,7 +49,7 @@ public class UserServiceImpl implements UserService {
 			return new ResponseEntity<>("Email exists", HttpStatus.BAD_REQUEST);
 		}
 
-		// TODO: hash password
+		encryptPassword(user);
 
 		// verification part
 		user.setIsActivated(false);
@@ -53,6 +60,7 @@ public class UserServiceImpl implements UserService {
 		return new ResponseEntity<>("Register success", HttpStatus.OK);
 	}
 
+
 	@Override
 	public ResponseEntity<String> login(User user) {
 		ResponseEntity<String> checkUserResult = checkUser(user);
@@ -60,38 +68,50 @@ public class UserServiceImpl implements UserService {
 			return checkUserResult;
 		}
 
-		Optional<User> byEmailAndPassword = userRepository.findByEmailAndPassword(user.getEmail(), user.getPassword());
+		Optional<User> byEmailAndPassword = userRepository.findByEmail(user.getEmail());
 		if (byEmailAndPassword.isEmpty()) {
-			return new ResponseEntity<>("Password is not correct", HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
 		}
 
-		return new ResponseEntity<>("login success", HttpStatus.OK);
+		User temp = byEmailAndPassword.get();
+		if (!passwordEncoder.matches(user.getPassword(), temp.getPassword())) {
+			return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
+		}
+
+		Map<String, Object> claims = new HashMap<>();
+		claims.put("email", user.getEmail());
+		claims.put("password", user.getPassword());
+		return new ResponseEntity<>(JwtUtil.encode(claims), HttpStatus.OK);
 	}
 
+
+	@Override
 	public void sendVerificationEmail(User user) {
 		ResponseEntity<String> checkUserResult = checkUser(user);
 		if (checkUserResult != null) {
 			return;
 		}
 
-		String uuid = UUID.randomUUID().toString();
-		user.setVerificationCode(uuid);
+		SecureRandom random = new SecureRandom();
+		String code = String.valueOf(random.nextInt(9000) + 1000);
+		user.setVerificationCode(code);
 		user.setVerificationCodeTime(new Date());
 
 		String subject = "WeRide account activate";
 		// TODO: update content
-		String content = uuid;
+		String content = code;
 		mailService.sendWithHtml(user.getEmail(), subject, content);
 	}
 
 	@Override
-	public ResponseEntity<String> activateAccount(String code) {
-		Optional<User> byVerificationCode = userRepository.findByVerificationCode(code);
-		if (byVerificationCode.isEmpty()) {
+	public ResponseEntity<String> activateAccount(User user) {
+		Optional<User> optionalUserFound = userRepository.findByVerificationCodeAndEmail(user.getVerificationCode(),
+		   user.getEmail());
+		if (optionalUserFound.isEmpty()) {
 			return new ResponseEntity<>("Your code is wrong", HttpStatus.BAD_REQUEST);
 		}
 
-		User user = byVerificationCode.get();
+		User userFound = optionalUserFound.get();
 
 		long diffInMillis = Math.abs(new Date().getTime() - user.getVerificationCodeTime().getTime());
 		long diffInHours = diffInMillis / millisToSeconds;
@@ -138,5 +158,11 @@ public class UserServiceImpl implements UserService {
 		}
 
 		return null;
+	}
+
+	private User encryptPassword(User user) {
+		//		String hashedPassword = passwordEncoder.encode(user.getPassword());
+		//		user.setPassword(hashedPassword);
+		return user;
 	}
 }

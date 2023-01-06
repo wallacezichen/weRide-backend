@@ -37,7 +37,7 @@ public class UserController {
 		return userService.login(user);
 	}
 
-	@GetMapping("/resent-verification")
+	@GetMapping("/resend-verification")
 	public void resentVerificationEmail(@RequestBody User user) {
 		userService.sendVerificationEmail(user);
 	}
@@ -48,8 +48,8 @@ public class UserController {
 	}
 
 
-	@PostMapping("/verification/{code}")
-	public ResponseEntity<String> activateUser(@PathVariable(value = "code") String code) {
-		return userService.activateAccount(code);
+	@PostMapping("/verification")
+	public ResponseEntity<String> activateUser(@RequestBody User user) {
+		return userService.activateAccount(user);
 	}
 }

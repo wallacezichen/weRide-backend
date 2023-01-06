@@ -11,7 +11,7 @@ public interface UserService {
 
 	void sendVerificationEmail(User user);
 
-	ResponseEntity<String> activateAccount(String code);
+	ResponseEntity<String> activateAccount(User user);
 
 
 	ResponseEntity<String> update(User user);
