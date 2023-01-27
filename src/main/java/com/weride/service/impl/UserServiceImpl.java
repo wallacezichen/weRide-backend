@@ -18,151 +18,142 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-
 public class UserServiceImpl implements UserService {
-	private final MailService mailService;
-	private final UserRepository userRepository;
 
-	BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+  private final MailService mailService;
+  private final UserRepository userRepository;
+  BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+  public final int millisToSeconds = 1000;
+  public final int SecondsIn24Hours = 24 * 60 * 60;
 
-
-	public final int millisToSeconds = 1000;
-	public final int SecondsIn24Hours = 24 * 60 * 60;
-
-	@Autowired
-	public UserServiceImpl(MailService mailService, UserRepository userRepository) {
-		this.mailService = mailService;
-		this.userRepository = userRepository;
-	}
+  @Autowired
+  public UserServiceImpl(MailService mailService, UserRepository userRepository) {
+    this.mailService = mailService;
+    this.userRepository = userRepository;
+  }
 
 
-	@Override
-	@Transactional
-	public ResponseEntity<String> register(User user) {
-		ResponseEntity<String> checkUserResult = checkUser(user);
-		if (checkUserResult != null) {
-			return checkUserResult;
-		}
+  @Override
+  @Transactional
+  public ResponseEntity<String> register(User user) {
+    ResponseEntity<String> checkUserResult = checkUser(user);
+    if (checkUserResult != null) {
+      return checkUserResult;
+    }
 
-		Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-		if (!byEmail.isEmpty()) {
-			return new ResponseEntity<>("Email exists", HttpStatus.BAD_REQUEST);
-		}
+    Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
+    if (byEmail.isPresent()) {
+      return new ResponseEntity<>("Email exists", HttpStatus.BAD_REQUEST);
+    }
 
-		encryptPassword(user);
+    encryptPassword(user);
 
-		// verification part
-		user.setIsActivated(false);
+    // verification part
+    user.setIsActivated(false);
 
-		sendVerificationEmail(user);
+    sendVerificationEmail(user);
 
-		userRepository.save(user);
-		return new ResponseEntity<>("Register success", HttpStatus.OK);
-	}
-
-
-	@Override
-	public ResponseEntity<String> login(User user) {
-		ResponseEntity<String> checkUserResult = checkUser(user);
-		if (checkUserResult != null) {
-			return checkUserResult;
-		}
-
-		Optional<User> byEmailAndPassword = userRepository.findByEmail(user.getEmail());
-		if (byEmailAndPassword.isEmpty()) {
-			return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
-		}
-
-		User temp = byEmailAndPassword.get();
-		if (!passwordEncoder.matches(user.getPassword(), temp.getPassword())) {
-			return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
-		}
-
-		Map<String, Object> claims = new HashMap<>();
-		claims.put("email", user.getEmail());
-		claims.put("password", user.getPassword());
-		return new ResponseEntity<>(JwtUtil.encode(claims), HttpStatus.OK);
-	}
+    userRepository.save(user);
+    return new ResponseEntity<>("Register success", HttpStatus.OK);
+  }
 
 
-	@Override
-	public void sendVerificationEmail(User user) {
-		ResponseEntity<String> checkUserResult = checkUser(user);
-		if (checkUserResult != null) {
-			return;
-		}
+  @Override
+  public ResponseEntity<String> login(User user) {
+    ResponseEntity<String> checkUserResult = checkUser(user);
+    if (checkUserResult != null) {
+      return checkUserResult;
+    }
 
-		SecureRandom random = new SecureRandom();
-		String code = String.valueOf(random.nextInt(9000) + 1000);
-		user.setVerificationCode(code);
-		user.setVerificationCodeTime(new Date());
+    Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
+    return byEmail.map((User temp) -> {
+      //		if (!passwordEncoder.matches(user.getPassword(), temp.getPassword())) {
+      if (!user.getPassword().equals(temp.getPassword())) {
+        System.out.println("wrong password");
+        return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
+      }
 
-		String subject = "WeRide account activate";
-		// TODO: update content
-		String content = code;
-		mailService.sendWithHtml(user.getEmail(), subject, content);
-	}
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("email", user.getEmail());
+      claims.put("password", user.getPassword());
+      return new ResponseEntity<>(JwtUtil.encode(claims), HttpStatus.OK);
+    }).orElseGet(() -> new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST));
+  }
 
-	@Override
-	public ResponseEntity<String> activateAccount(User user) {
-		Optional<User> optionalUserFound = userRepository.findByVerificationCodeAndEmail(user.getVerificationCode(),
-		   user.getEmail());
-		if (optionalUserFound.isEmpty()) {
-			return new ResponseEntity<>("Your code is wrong", HttpStatus.BAD_REQUEST);
-		}
 
-		User userFound = optionalUserFound.get();
+  @Override
+  public void sendVerificationEmail(User user) {
+    ResponseEntity<String> checkUserResult = checkUser(user);
+    if (checkUserResult != null) {
+      return;
+    }
 
-		long diffInMillis = Math.abs(new Date().getTime() - user.getVerificationCodeTime().getTime());
-		long diffInHours = diffInMillis / millisToSeconds;
-		if (diffInHours > SecondsIn24Hours) {
-			return new ResponseEntity<>("Your code is expired", HttpStatus.BAD_REQUEST);
-		}
+    SecureRandom random = new SecureRandom();
+    String code = String.valueOf(random.nextInt(9000) + 1000);
+    user.setVerificationCode(code);
+    user.setVerificationCodeTime(new Date());
 
-		user.setIsActivated(true);
-		userRepository.save(user);
-		return new ResponseEntity<>("Activate success", HttpStatus.OK);
-	}
+    String subject = "WeRide account activate";
+    // TODO: update content
+    String content = code;
+    mailService.sendWithHtml(user.getEmail(), subject, content);
+  }
 
-	@Override
-	public ResponseEntity<String> update(User user) {
-		ResponseEntity<String> checkUserResult = checkUser(user);
-		if (checkUserResult != null) {
-			return checkUserResult;
-		}
+  @Override
+  public ResponseEntity<String> activateAccount(User user) {
+    Optional<User> optionalUserFound = userRepository.findByVerificationCodeAndEmail(
+        user.getVerificationCode(),
+        user.getEmail());
 
-		Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-		if (byEmail.isEmpty()) {
-			return new ResponseEntity<>("User do not exist", HttpStatus.BAD_REQUEST);
-		}
+    return optionalUserFound.map(userFound -> {
+      long diffInMillis = Math.abs(new Date().getTime() - user.getVerificationCodeTime().getTime());
+      long diffInHours = diffInMillis / millisToSeconds;
+      if (diffInHours > SecondsIn24Hours) {
+        return new ResponseEntity<>("Your code is expired", HttpStatus.BAD_REQUEST);
+      }
 
-		User userInData = byEmail.get();
-		// TODO: assign new value
+      user.setIsActivated(true);
+      userRepository.save(user);
+      return new ResponseEntity<>("Activate success", HttpStatus.OK);
+    }).orElseGet(() -> new ResponseEntity<>("Your code is wrong", HttpStatus.BAD_REQUEST));
+  }
 
-		userRepository.save(userInData);
-		return new ResponseEntity<>("update success", HttpStatus.OK);
-	}
+  @Override
+  public ResponseEntity<String> update(User user) {
+    ResponseEntity<String> checkUserResult = checkUser(user);
+    if (checkUserResult != null) {
+      return checkUserResult;
+    }
 
-	private ResponseEntity<String> checkUser(User user) {
-		if (user == null) {
-			return new ResponseEntity<>("User cannot be null", HttpStatus.BAD_REQUEST);
-		}
+    Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
+    return byEmail.map(userInDB -> {
+      userRepository.save(userInDB);
+      // TODO: assign new value
 
-		if (user.getEmail() == null || user.getPassword() == null) {
-			return new ResponseEntity<>("Email address and password is needed.", HttpStatus.BAD_REQUEST);
-		}
+      return new ResponseEntity<>("update success", HttpStatus.OK);
+    }).orElseGet(() -> new ResponseEntity<>("User do not exist", HttpStatus.BAD_REQUEST));
+  }
 
-		String domain = user.getEmail().split("@")[1];
-		if (!"ucsd.edu".equals(domain)) {
-			return new ResponseEntity<>("Email should be end with ucsd.edu", HttpStatus.BAD_REQUEST);
-		}
+  private ResponseEntity<String> checkUser(User user) {
+    if (user == null) {
+      return new ResponseEntity<>("User cannot be null", HttpStatus.BAD_REQUEST);
+    }
 
-		return null;
-	}
+    if (user.getEmail() == null || user.getPassword() == null) {
+      return new ResponseEntity<>("Email address and password is needed.", HttpStatus.BAD_REQUEST);
+    }
 
-	private User encryptPassword(User user) {
-		//		String hashedPassword = passwordEncoder.encode(user.getPassword());
-		//		user.setPassword(hashedPassword);
-		return user;
-	}
+    String domain = user.getEmail().split("@")[1];
+    if (!"ucsd.edu".equals(domain)) {
+      return new ResponseEntity<>("Email should be end with ucsd.edu", HttpStatus.BAD_REQUEST);
+    }
+
+    return null;
+  }
+
+  private User encryptPassword(User user) {
+    //				String hashedPassword = passwordEncoder.encode(user.getPassword());
+    //				user.setPassword(hashedPassword);
+    return user;
+  }
 }
