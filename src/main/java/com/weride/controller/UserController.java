@@ -47,7 +47,6 @@ public class UserController {
 		return userService.update(user);
 	}
 
-
 	@PostMapping("/verification")
 	public ResponseEntity<String> activateUser(@RequestBody User user) {
 		return userService.activateAccount(user);
