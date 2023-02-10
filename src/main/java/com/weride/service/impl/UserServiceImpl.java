@@ -66,9 +66,7 @@ public class UserServiceImpl implements UserService {
     }
 
     Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-    if (!byEmail.isPresent()){
-      return new ResponseEntity<>("User does not exit.",HttpStatus.BAD_REQUEST);
-    }
+ 
     return byEmail.map((User temp) -> {
       //		if (!passwordEncoder.matches(user.getPassword(), temp.getPassword())) {
       if (!user.getPassword().equals(temp.getPassword())) {
