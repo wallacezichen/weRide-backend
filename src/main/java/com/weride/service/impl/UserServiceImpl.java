@@ -66,6 +66,9 @@ public class UserServiceImpl implements UserService {
     }
 
     Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
+    if (!byEmail.isPresent()){
+      return new ResponseEntity<>("User does not exit.",HttpStatus.BAD_REQUEST);
+    }
     return byEmail.map((User temp) -> {
       //		if (!passwordEncoder.matches(user.getPassword(), temp.getPassword())) {
       if (!user.getPassword().equals(temp.getPassword())) {
@@ -73,6 +76,7 @@ public class UserServiceImpl implements UserService {
         return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
       }
 
+      // jwt
       Map<String, Object> claims = new HashMap<>();
       claims.put("email", user.getEmail());
       claims.put("password", user.getPassword());
@@ -147,6 +151,7 @@ public class UserServiceImpl implements UserService {
     if (!"ucsd.edu".equals(domain)) {
       return new ResponseEntity<>("Email should be end with ucsd.edu", HttpStatus.BAD_REQUEST);
     }
+
 
     return null;
   }
