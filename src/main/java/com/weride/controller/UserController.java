@@ -51,4 +51,12 @@ public class UserController {
 	public ResponseEntity<String> activateUser(@RequestBody User user) {
 		return userService.activateAccount(user);
 	}
+
+	@PostMapping("/reset")
+    public ResponseEntity<String> resetPassword(@RequestBody User user) {return userService.resetPassword(user);}
+    
+	@GetMapping("/send-verification-reset")
+    public void sentVerificationEmailForResetPassword(@RequestBody User user) {
+        userService.sendVerificationEmail(user);
+    }
 }

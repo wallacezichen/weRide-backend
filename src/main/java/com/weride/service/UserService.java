@@ -13,6 +13,7 @@ public interface UserService {
 
 	ResponseEntity<String> activateAccount(User user);
 
-
 	ResponseEntity<String> update(User user);
+
+	ResponseEntity<String> resetPassword(User user);
 }
