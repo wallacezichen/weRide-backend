@@ -10,6 +10,7 @@ public interface UserService {
 	ResponseEntity<String> login(User user);
 
 	void sendVerificationEmail(User user);
+	void sendResetPasswordEmail(User user);
 
 	ResponseEntity<String> activateAccount(User user);
 
