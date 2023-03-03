@@ -23,15 +23,23 @@ public class WebSecurityConfig implements WebMvcConfigurer {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // no verify; otherwise, needs
+        String[] permitUrlList = {
+                "/api/user-service/register",
+                "/api/user-service/login",
+                "/api/user-service/resend-verification",
+                "/api/user-service/send-reset-verification",
+                "/api/user-service/reset",
+                "/api/user-service/reset/verification",
+        };
         http.csrf().disable()
                 // dont authenticate this particular request
-                .authorizeRequests().antMatchers("/api/user-service/register", "/api/user-service/login", "/api/user-services/resend-verification").permitAll().
+                .authorizeRequests().antMatchers(permitUrlList).permitAll().
                 // all other requests need to be authenticated
                         anyRequest().authenticated().and().
                 // make sure we use stateless session; session won't be used to
                 // store user's state.
-                        exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).and().sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                        exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         // Add a filter to validate the tokens with every request
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);

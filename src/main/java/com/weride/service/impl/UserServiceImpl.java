@@ -127,7 +127,7 @@ public class UserServiceImpl implements UserService {
 
         Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
         return byEmail.map(userInDB -> {
-            if (!user.getPassword().equals("")){
+            if (!user.getPassword().equals("")) {
                 userInDB.setPassword(user.getPassword());
                 encryptPassword(userInDB);
             }
@@ -140,21 +140,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<String> resetPassword(User user){
+    public ResponseEntity<String> resetPassword(User user) {
+        if (user.getVerificationCode() == null) {
+            return new ResponseEntity<>("Verification code cannot be empty", HttpStatus.BAD_REQUEST);
+        }
         Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
         return byEmail.map(userInDB -> {
-            if (user.getVerificationCode().equals(userInDB.getVerificationCode())){
-                if (!user.getPassword().equals("")){
+            if (user.getVerificationCode().equals(userInDB.getVerificationCode())) {
+                if (!user.getPassword().equals("")) {
                     userInDB.setPassword(user.getPassword());
                     encryptPassword(userInDB);
-                }
-                else{
+                } else {
                     return new ResponseEntity<>("Password cannot be null", HttpStatus.BAD_REQUEST);
                 }
                 userRepository.save(userInDB);
+                userInDB.setVerificationCode(null);
                 return new ResponseEntity<>("Successfully update", HttpStatus.OK);
-            }
-            else{
+            } else {
                 return new ResponseEntity<>("Verification code does not match", HttpStatus.BAD_REQUEST);
             }
         }).orElseGet(() -> new ResponseEntity<>("User does not exist", HttpStatus.BAD_REQUEST));
@@ -183,5 +185,23 @@ public class UserServiceImpl implements UserService {
         user.setPassword(hashedPassword);
 
         return user;
+    }
+
+    @Override
+    public void sendResetPasswordEmail(User user) {
+        Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
+        byEmail.ifPresent(userFound -> {
+            SecureRandom random = new SecureRandom();
+            String code = String.valueOf(random.nextInt(9000) + 1000);
+            userFound.setVerificationCode(code);
+            userFound.setVerificationCodeTime(new Date());
+
+            String subject = "WeRide password reset";
+            String content = code;
+            System.out.println("sendResetPasswordEmail: " + content);
+            // TODO: update content
+            mailService.sendWithHtml(userFound.getEmail(), subject, content);
+        });
+
     }
 }
