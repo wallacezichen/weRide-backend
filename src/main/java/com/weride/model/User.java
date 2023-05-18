@@ -5,6 +5,7 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.Date;
+import java.util.Set;
 
 
 @Entity
@@ -32,6 +33,8 @@ public class User {
     @Column(name = "last_name")
     private String lastName;
 
+    @Column(name = "email", nullable = false,unique = true)
+    private String email;
 
     @Column(name = "address")
     private String address;
@@ -39,7 +42,13 @@ public class User {
     @Column(name = "phone_number")
     private String phoneNumber;
 
-    @Column(name = "gender")
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @Column(name = "token", nullable = false)
+    private String token;
+
+    @Column(name = "gender", nullable = false)
     private Boolean gender;
 
     @Column(name = "create_date")
@@ -50,6 +59,20 @@ public class User {
 
     @Column(name = "last_update_at_date")
     private Date lastUpdateAtDate;
+
+    @Column(name = "accountVerified", nullable = false)
+    private Boolean accountVerified;
+
+    @OneToMany(mappedBy = "user")
+    private Set<SecureToken> tokens;
+
+
+
+
+//    @OneToOne(cascade = CascadeType.ALL)
+//    @JoinColumn(name = "fk_instructor_id", nullable = true)
+//    private Long drive_id
+
 
     @Column(name = "verification_code")
     private String verificationCode;
