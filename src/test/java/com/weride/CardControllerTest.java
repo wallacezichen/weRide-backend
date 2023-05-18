@@ -1,20 +1,22 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
+package com.weride;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 import com.weride.controller.CardController;
 import com.weride.model.Card;
 import com.weride.service.CardService;
+import java.time.YearMonth;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
-import java.time.YearMonth;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CardControllerTest {
@@ -24,14 +26,14 @@ public class CardControllerTest {
     @InjectMocks
     private CardController cardController;
 
+
     @Test
     public void testAddCard() throws Exception {
         Card card = Card.builder()
-                .cardType("Visa")
-                .cardNumber(1234567890)
-                .cardName("John Doe")
+                .cardNumber("1234567890")
+                .nameOnCard("John Doe")
                 .expirationDate(YearMonth.of(2023, 12))
-                .cardPin(1234)
+                .cvv("1234")
                 .build();
 
         when(cardService.saveCard(card)).thenReturn(ResponseEntity.status(HttpStatus.OK).body("Card saved successfully"));
