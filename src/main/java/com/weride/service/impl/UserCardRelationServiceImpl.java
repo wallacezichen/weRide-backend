@@ -7,6 +7,7 @@ import com.weride.service.UserCardRelationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,44 +20,48 @@ public class UserCardRelationServiceImpl implements UserCardRelationService {
     }
 
     @Override
-    public ResponseEntity<String> addCardToUser(UserCardRelation userCardRelation) {
+    @Transactional
+    public Boolean addCardToUser(UserCardRelation userCardRelation) {
         // Check if the card exists
         //这块逻辑还有点问题需要再讨论一下,我在思考如何query database
         if (relationExists(userCardRelation)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("UserCardRelation already exists");
+            return false;
         }
 
         // Implement logic to add the card to the user
         // Replace with your actual implementation
         userCardRelationRepository.save(userCardRelation);
-        return ResponseEntity.ok("Card added to the user successfully");
+        return true;
+
     }
 
     @Override
-    public ResponseEntity<String> removeCardFromUser(UserCardRelation userCardRelation) {
+    @Transactional
+    public Boolean removeCardFromUser(UserCardRelation userCardRelation) {
         // Check if the card exists
         if (!relationExists(userCardRelation)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Card not found");
+            return false;
         }
 
         // Implement logic to remove the card from the user
         // Replace with your actual implementation
         userCardRelationRepository.delete(userCardRelation);
-        return ResponseEntity.ok("Card removed from the user successfully");
+        return true;
     }
 
     @Override
-    public ResponseEntity<String> updateCard(UserCardRelation userCardRelation, Card card) {
+    @Transactional
+    public Boolean updateCard(UserCardRelation userCardRelation, Card card) {
         // Check if the card exists
         if (!relationExists(userCardRelation)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Card not found");
+            return false;
         }
 
         // Implement logic to update the card
         // Replace with your actual implementation
         userCardRelation.setCard(card);
         userCardRelationRepository.save(userCardRelation);
-        return ResponseEntity.ok("Card updated successfully");
+        return true;
     }
 
     @Override
