@@ -34,4 +34,5 @@ public class Card {
 
     @Column(name = "cvv", nullable = false)
     private String cvv;
+
 }
