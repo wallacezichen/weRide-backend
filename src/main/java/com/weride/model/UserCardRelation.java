@@ -3,16 +3,16 @@ package com.weride.model;
 import java.time.YearMonth;
 import javax.persistence.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.stereotype.Repository;
 
 @Data
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
 @Entity
+@Getter
+@Setter
 @Table(name = "UserCardRelation")
 public class UserCardRelation {
     @Id

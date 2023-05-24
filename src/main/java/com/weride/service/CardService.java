@@ -2,6 +2,8 @@ package com.weride.service;
 
 import com.weride.model.Card;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Repository;
+
 
 public interface CardService {
 
