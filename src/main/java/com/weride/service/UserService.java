@@ -1,20 +1,22 @@
 package com.weride.service;
 
-import com.weride.model.User;
-import org.springframework.http.ResponseEntity;
+import com.weride.dto.ResetPasswordRequest;
+import com.weride.dto.Result;
+import com.weride.dto.UserActivationRequest;
+import com.weride.dto.UserAuthRequest;
 
 
 public interface UserService {
-	ResponseEntity<String> register(User user);
 
-	ResponseEntity<String> login(User user);
+    Result register(UserAuthRequest request);
 
-	void sendVerificationEmail(User user);
-	void sendResetPasswordEmail(User user);
+    Result login(UserAuthRequest request);
 
-	ResponseEntity<String> activateAccount(User user);
+    Result sendVerificationEmail(String email);
 
-	ResponseEntity<String> update(User user);
+    Result resetPassword(ResetPasswordRequest request);
 
-	ResponseEntity<String> resetPassword(User user);
+    Result activateAccount(UserActivationRequest user);
+
+    Result refreshTokens(String oldRefreshToken);
 }

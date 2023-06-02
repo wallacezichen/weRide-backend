@@ -4,14 +4,13 @@ import com.weride.model.Card;
 import com.weride.model.UserCardRelation;
 import com.weride.repository.UserCardRelationRepository;
 import com.weride.service.UserCardRelationService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
-import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.transaction.Transactional;
+import org.springframework.stereotype.Service;
 
+@Service
 public class UserCardRelationServiceImpl implements UserCardRelationService {
     private final UserCardRelationRepository userCardRelationRepository;
 
