@@ -1,207 +1,207 @@
 package com.weride.service.impl;
 
+import com.weride.dto.ResetPasswordRequest;
+import com.weride.dto.Result;
+import com.weride.dto.UserActivationRequest;
+import com.weride.dto.UserAuthRequest;
 import com.weride.model.User;
 import com.weride.repository.UserRepository;
+import com.weride.security.jwt.JWTProvider;
 import com.weride.service.MailService;
 import com.weride.service.UserService;
-import com.weride.utils.JwtUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.security.SecureRandom;
-import java.util.Date;
-import java.util.HashMap;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.weride.security.jwt.JWTType.ACCESS;
+import static com.weride.security.jwt.JWTType.REFRESH;
+
+@Slf4j
 @Service
 public class UserServiceImpl implements UserService {
 
     private final MailService mailService;
     private final UserRepository userRepository;
     BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    public final int millisToSeconds = 1000;
-    public final int SecondsIn24Hours = 24 * 60 * 60;
+    private final JWTProvider jwtProvider;
 
     @Autowired
-    public UserServiceImpl(MailService mailService, UserRepository userRepository) {
+    public UserServiceImpl(MailService mailService, UserRepository userRepository, JWTProvider jwtProvider) {
         this.mailService = mailService;
         this.userRepository = userRepository;
+        this.jwtProvider = jwtProvider;
     }
 
 
     @Override
     @Transactional
-    public ResponseEntity<String> register(User user) {
-        ResponseEntity<String> checkUserResult = checkUser(user);
-        if (checkUserResult != null) {
-            return checkUserResult;
+    public Result register(UserAuthRequest request) {
+        Optional<User> byEmail = userRepository.findByEmail(request.getEmail());
+        LocalDateTime now = LocalDateTime.now();
+        String code = generateCode();
+
+        User user = byEmail.orElseGet(() ->
+                User.builder()
+                        .email(request.getEmail())
+                        .password(passwordEncoder.encode(request.getPassword()))
+                        .isActivated(false)
+                        .createDate(now)
+                        .lastUpdateAtDate(now)
+                        .build()
+        );
+        log.info(user.getEmail());
+        if (user.getIsActivated()) {
+            log.info("register: email exist: {}", request);
+            return Result.fail("Email exists");
         }
 
-        Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-        if (byEmail.isPresent()) {
-            return new ResponseEntity<>("Email exists", HttpStatus.BAD_REQUEST);
-        }
-
-        encryptPassword(user);
-
-        // verification part
-        user.setIsActivated(false);
-
-        sendVerificationEmail(user);
-
+        user.setVerificationCode(code);
+        user.setVerificationCodeTime(now);
         userRepository.save(user);
-        return new ResponseEntity<>("Register success", HttpStatus.OK);
+        sendVerificationEmail(request.getEmail(), code);
+
+        log.info("register success: {}", request);
+        return Result.ok();
+    }
+
+    @Override
+    public Result login(UserAuthRequest request) {
+        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
+
+        if (optionalUser.isEmpty()) {
+            return Result.fail("Email is not registered");
+        }
+
+        User user = optionalUser.get();
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return Result.fail("Email or password is incorrect");
+        }
+
+        Map<String, String> tokens = generateTokens(user.getEmail());
+        user.setRefreshToken(tokens.get("refreshToken"));
+        userRepository.save(user);
+
+        return Result.ok(tokens);
     }
 
 
     @Override
-    public ResponseEntity<String> login(User user) {
-        ResponseEntity<String> checkUserResult = checkUser(user);
-        if (checkUserResult != null) {
-            return checkUserResult;
+    @Transactional
+    public Result sendVerificationEmail(String email) {
+        Optional<User> byEmail = userRepository.findByEmail(email);
+        byEmail.ifPresent(user -> {
+            String code = generateCode();
+            user.setVerificationCode(code);
+            user.setVerificationCodeTime(LocalDateTime.now());
+            sendVerificationEmail(email, code);
+            userRepository.save(user);
+        });
+
+        return byEmail
+                .map(temp -> Result.ok())
+                .orElse(Result.fail("Email does not exist"));
+    }
+
+    @Override
+    @Transactional
+    public Result resetPassword(ResetPasswordRequest request) {
+        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
+
+        Result result = checkVerificationCode(optionalUser, request.getCode());
+        if (result != null) {
+            return result;
         }
 
-        Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-        return byEmail.map((User temp) -> {
+        User user = optionalUser.get();
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        userRepository.save(user);
+        return Result.ok();
+    }
 
-            if (!passwordEncoder.matches(user.getPassword(), temp.getPassword())) {
-                return new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST);
-            }
-            // jwt
-            Map<String, Object> claims = new HashMap<>();
-            claims.put("email", user.getEmail());
-            claims.put("password", user.getPassword());
-            return new ResponseEntity<>(JwtUtil.encode(claims), HttpStatus.OK);
-        }).orElseGet(() -> new ResponseEntity<>("Your input is not correct", HttpStatus.BAD_REQUEST));
+    @Override
+    @Transactional
+    public Result activateAccount(UserActivationRequest request) {
+        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
+        Result result = checkVerificationCode(optionalUser, request.getCode());
+        if (result != null) {
+            return result;
+        }
+
+        User user = optionalUser.get();
+        user.setIsActivated(true);
+        userRepository.save(user);
+        return Result.ok();
+    }
+
+    @Override
+    @Transactional
+    public Result refreshTokens(String oldRefreshToken) {
+        log.info(oldRefreshToken);
+        Optional<User> byRefreshToken = userRepository.findByRefreshToken(oldRefreshToken);
+        if (byRefreshToken.isEmpty()) {
+            return Result.fail("Refresh token not found");
+        }
+
+        User user = byRefreshToken.get();
+        Map<String, String> tokens = generateTokens(user.getEmail());
+        user.setRefreshToken(tokens.get("refreshToken"));
+        userRepository.save(user);
+        return Result.ok(tokens);
     }
 
 
-    @Override
-    public void sendVerificationEmail(User user) {
-        ResponseEntity<String> checkUserResult = checkUser(user);
-        if (checkUserResult != null) {
-            return;
-        }
-
+    private static String generateCode() {
         SecureRandom random = new SecureRandom();
         String code = String.valueOf(random.nextInt(9000) + 1000);
-        user.setVerificationCode(code);
-        user.setVerificationCodeTime(new Date());
+        return code;
+    }
 
+    private void sendVerificationEmail(String email, String code) {
         String subject = "WeRide account activate";
-        // TODO: update content
-        String content = code;
-        mailService.sendWithHtml(user.getEmail(), subject, content);
+        mailService.sendWithHtml(email, subject, code);
     }
 
-    @Override
-    public ResponseEntity<String> activateAccount(User user) {
-        Optional<User> optionalUserFound = userRepository.findByVerificationCodeAndEmail(
-                user.getVerificationCode(),
-                user.getEmail());
+    private Map<String, String> generateTokens(String email) {
+        log.info("IN UserService -> generatesTokens(): gen tokens for user[email:{}]", email);
 
-        return optionalUserFound.map(userFound -> {
-            long diffInMillis = Math.abs(new Date().getTime() - user.getVerificationCodeTime().getTime());
-            long diffInHours = diffInMillis / millisToSeconds;
-            if (diffInHours > SecondsIn24Hours) {
-                return new ResponseEntity<>("Your code is expired", HttpStatus.BAD_REQUEST);
-            }
+        String accessToken = jwtProvider.generateToken(ACCESS, email);
+        String accessExpiration = jwtProvider.getExpirationDate(accessToken, ACCESS).toString();
+        String refreshToken = jwtProvider.generateToken(REFRESH, email);
+        String refreshExpiration = jwtProvider.getExpirationDate(refreshToken, REFRESH).toString();
 
-            user.setIsActivated(true);
-            userRepository.save(user);
-            return new ResponseEntity<>("Activate success", HttpStatus.OK);
-        }).orElseGet(() -> new ResponseEntity<>("Your code is wrong", HttpStatus.BAD_REQUEST));
+        return Map.of(
+                "accessToken", accessToken,
+                "accessTokenExpiration", accessExpiration.substring(0, accessExpiration.indexOf("[")),
+                "refreshToken", refreshToken,
+                "refreshTokenExpiration", refreshExpiration.substring(0, refreshExpiration.indexOf("["))
+        );
     }
 
-    @Override
-    public ResponseEntity<String> update(User user) {
-        ResponseEntity<String> checkUserResult = checkUser(user);
-        if (checkUserResult != null) {
-            return checkUserResult;
+    private Result checkVerificationCode(Optional<User> optionalUser, String code) {
+        if (optionalUser.isEmpty()) {
+            return Result.fail("Email does not exist");
         }
 
-        Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-        return byEmail.map(userInDB -> {
-            if (!user.getPassword().equals("")) {
-                userInDB.setPassword(user.getPassword());
-                encryptPassword(userInDB);
-            }
-            userRepository.save(userInDB);
+        User user = optionalUser.get();
+        Duration duration = Duration.between(user.getVerificationCodeTime(), LocalDateTime.now());
 
-            // TODO: assign new value
-
-            return new ResponseEntity<>("update success", HttpStatus.OK);
-        }).orElseGet(() -> new ResponseEntity<>("User does not exist", HttpStatus.BAD_REQUEST));
-    }
-
-    @Override
-    public ResponseEntity<String> resetPassword(User user) {
-        if (user.getVerificationCode() == null) {
-            return new ResponseEntity<>("Verification code cannot be empty", HttpStatus.BAD_REQUEST);
-        }
-        Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-        return byEmail.map(userInDB -> {
-            if (user.getVerificationCode().equals(userInDB.getVerificationCode())) {
-                if (!user.getPassword().equals("")) {
-                    userInDB.setPassword(user.getPassword());
-                    encryptPassword(userInDB);
-                } else {
-                    return new ResponseEntity<>("Password cannot be null", HttpStatus.BAD_REQUEST);
-                }
-                userRepository.save(userInDB);
-                userInDB.setVerificationCode(null);
-                return new ResponseEntity<>("Successfully update", HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>("Verification code does not match", HttpStatus.BAD_REQUEST);
-            }
-        }).orElseGet(() -> new ResponseEntity<>("User does not exist", HttpStatus.BAD_REQUEST));
-    }
-
-    private ResponseEntity<String> checkUser(User user) {
-        if (user == null) {
-            return new ResponseEntity<>("User cannot be null", HttpStatus.BAD_REQUEST);
+        if (duration.toHours() > 24) {
+            return Result.fail("Verification code is expired");
         }
 
-        if (user.getEmail() == null || user.getPassword() == null) {
-            return new ResponseEntity<>("Email address and password is needed.", HttpStatus.BAD_REQUEST);
-        }
-
-        String domain = user.getEmail().split("@")[1];
-        if (!"ucsd.edu".equals(domain)) {
-            return new ResponseEntity<>("Email should be end with ucsd.edu", HttpStatus.BAD_REQUEST);
+        if (!code.equals(user.getVerificationCode())) {
+            return Result.fail("Verification code is not correct");
         }
 
         return null;
-    }
-
-    private User encryptPassword(User user) {
-
-        String hashedPassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(hashedPassword);
-
-        return user;
-    }
-
-    @Override
-    public void sendResetPasswordEmail(User user) {
-        Optional<User> byEmail = userRepository.findByEmail(user.getEmail());
-        byEmail.ifPresent(userFound -> {
-            SecureRandom random = new SecureRandom();
-            String code = String.valueOf(random.nextInt(9000) + 1000);
-            userFound.setVerificationCode(code);
-            userFound.setVerificationCodeTime(new Date());
-
-            String subject = "WeRide password reset";
-            String content = code;
-            System.out.println("sendResetPasswordEmail: " + content);
-            // TODO: update content
-            mailService.sendWithHtml(userFound.getEmail(), subject, content);
-        });
-
     }
 }
