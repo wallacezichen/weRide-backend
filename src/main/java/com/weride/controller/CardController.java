@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/card-service")
 public class CardController {
   private final CardRepository cardRepository;
-
   private final CardService cardService;
 
   public CardController(CardRepository cardRepository, CardService cardService) {

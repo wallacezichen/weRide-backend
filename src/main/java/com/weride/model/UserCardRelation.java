@@ -1,10 +1,8 @@
 package com.weride.model;
 
-import java.time.YearMonth;
-import javax.persistence.*;
-
 import lombok.*;
-import org.springframework.stereotype.Repository;
+
+import javax.persistence.*;
 
 @Data
 @AllArgsConstructor
@@ -24,6 +22,5 @@ public class UserCardRelation {
 
     @ManyToOne
     private User user;
-
 
 }

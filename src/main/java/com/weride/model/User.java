@@ -57,9 +57,6 @@ public class User {
     @Column(name = "refresh_token")
     private String refreshToken;
 
-//  @OneToMany(mappedBy = "user")
-//  private Set<SecureToken> tokens;
-
 //    @OneToOne(cascade = CascadeType.ALL)
 //    @JoinColumn(name = "fk_instructor_id", nullable = true)
 //    private Long drive_id

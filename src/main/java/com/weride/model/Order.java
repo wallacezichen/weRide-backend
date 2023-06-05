@@ -1,13 +1,12 @@
 package com.weride.model;
 
-import java.sql.Driver;
-import java.util.Date;
-import javax.persistence.*;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import javax.persistence.*;
+import java.util.Date;
 
 @Data
 @AllArgsConstructor
@@ -25,7 +24,7 @@ public class Order {
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "driver_id")
-    private Driver driverId;
+    private User driverId;
 
     @Column(name = "is_rated", nullable = false)
     private Boolean isRated;
@@ -48,11 +47,12 @@ public class Order {
     @Column(name = "drop_off_longitude", nullable = false)
     private double dropOffLongitude;
 
-
     @Column(name = "trip_fare", nullable = false)
     private Double tripFare;
+
     @Column(name = "trip_distance", nullable = false)
     private Double tripDistance;
+
     @Column(name = "trip_duration", nullable = false)
     private Double tripDuration;
 
@@ -65,11 +65,4 @@ public class Order {
 
     @Column(name = "is_paid", nullable = false)
     private Boolean isPaid;
-
-
-
-
-
-
-
 }

@@ -19,10 +19,11 @@ public class OrderController {
     private final OrderRepository orderRepository;
 
     @Autowired
-    public OrderController(OrderService orderService,OrderRepository orderRepository) {
+    public OrderController(OrderService orderService, OrderRepository orderRepository) {
         this.orderService = orderService;
         this.orderRepository = orderRepository;
     }
+
     @PostMapping("/create")
     public ResponseEntity<String> createOrder(@RequestBody Order order) {
         boolean created = orderService.createOrder(order);
