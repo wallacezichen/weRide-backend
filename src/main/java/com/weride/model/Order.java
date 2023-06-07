@@ -1,5 +1,6 @@
 package com.weride.model;
 
+import com.weride.model.enums.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

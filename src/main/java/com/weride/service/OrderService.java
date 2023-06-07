@@ -1,7 +1,7 @@
 package com.weride.service;
 
 import com.weride.model.Order;
-import com.weride.model.Status;
+import com.weride.model.enums.Status;
 
 import java.util.List;
 

@@ -1,4 +1,5 @@
 package com.weride.controller;
+import com.weride.dto.Result;
 import com.weride.model.Card;
 import com.weride.model.UserCardRelation;
 import com.weride.repository.UserCardRelationRepository;
@@ -7,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/userCardRelation-service")
@@ -18,34 +21,22 @@ public class UserCardRelationController {
         this.userCardRelationRepository = userCardRelationRepository;
     }
     @PostMapping("/add")
-    public ResponseEntity<String> add(@RequestBody UserCardRelation userCardRelation){
-        if (userCardRelationService.addCardToUser(userCardRelation)){
-            return ResponseEntity.ok("Card added to the user successfully");
-        }
-        else{
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("UserCardRelation already exists");
-        }
+    public Result add(@RequestBody UserCardRelation userCardRelation){
+        return userCardRelationService.addCardToUser(userCardRelation);
     }
     @DeleteMapping("/delete")
-    public ResponseEntity<String> remove(@RequestBody UserCardRelation userCardRelation){
-        if(userCardRelationService.removeCardFromUser(userCardRelation)){
-            return ResponseEntity.ok("Card removed from the user successfully");
-        }else{
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Card does not exist");
-        }
+    public Result remove(@RequestBody UserCardRelation userCardRelation){
+        return userCardRelationService.removeCardFromUser(userCardRelation);
     }
+
     @PostMapping("/update")
-    public ResponseEntity<String> update(@RequestBody UserCardRelation userCardRelation, Card card){
-        if(userCardRelationService.updateCard(userCardRelation, card)){
-            return ResponseEntity.ok("Card updated successfully");
-        }else{
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Card does not exist");
-        }
+    public Result update(@RequestBody UserCardRelation userCardRelation, Card card){
+        return userCardRelationService.updateCard(userCardRelation, card);
     }
 
 //    //有点问题
-//    @GetMapping("{userId}")
-//    public ResponseEntity<StudentCourse> getStudentCourseById(@PathVariable("userId") long studentCourseid){
-//        return new ResponseEntity<StudentCourse>(studentCourseService.getStudentCourseById(studentCourseid),HttpStatus.OK);
-//    }
+    @GetMapping("get/user/{userId}")
+    public List<Card> getCardByUser(@PathVariable("userId") Long userId) {
+        return userCardRelationService.getCardByUserId(userId);
+    }
 }

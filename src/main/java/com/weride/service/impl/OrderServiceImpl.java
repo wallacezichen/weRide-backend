@@ -1,8 +1,7 @@
 package com.weride.service.impl;
 
 import com.weride.model.Order;
-import com.weride.model.Status;
-import com.weride.model.UserCardRelation;
+import com.weride.model.enums.Status;
 import com.weride.repository.OrderRepository;
 import com.weride.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;

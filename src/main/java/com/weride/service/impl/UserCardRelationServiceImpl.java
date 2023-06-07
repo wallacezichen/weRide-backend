@@ -1,6 +1,8 @@
 package com.weride.service.impl;
 
+import com.weride.dto.Result;
 import com.weride.model.Card;
+import com.weride.model.User;
 import com.weride.model.UserCardRelation;
 import com.weride.repository.UserCardRelationRepository;
 import com.weride.service.UserCardRelationService;
@@ -13,67 +15,59 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserCardRelationServiceImpl implements UserCardRelationService {
     private final UserCardRelationRepository userCardRelationRepository;
+    private final Result result;
 
-    public UserCardRelationServiceImpl(UserCardRelationRepository userCardRelationRepository) {
+    public UserCardRelationServiceImpl(UserCardRelationRepository userCardRelationRepository, Result result) {
         this.userCardRelationRepository = userCardRelationRepository;
+        this.result = result;
     }
 
     @Override
     @Transactional
-    public Boolean addCardToUser(UserCardRelation userCardRelation) {
-        // Check if the card exists
-        //这块逻辑还有点问题需要再讨论一下,我在思考如何query database
+    public Result addCardToUser(UserCardRelation userCardRelation) {
         if (relationExists(userCardRelation)) {
-            return false;
+            return Result.fail("Relation already exists");
         }
 
-        // Implement logic to add the card to the user
-        // Replace with your actual implementation
         userCardRelationRepository.save(userCardRelation);
-        return true;
-
+        return Result.ok();
     }
 
     @Override
     @Transactional
-    public Boolean removeCardFromUser(UserCardRelation userCardRelation) {
-        // Check if the card exists
+    public Result removeCardFromUser(UserCardRelation userCardRelation) {
         if (!relationExists(userCardRelation)) {
-            return false;
+            return Result.fail("Relation does not exist");
         }
 
-        // Implement logic to remove the card from the user
-        // Replace with your actual implementation
         userCardRelationRepository.delete(userCardRelation);
-        return true;
+        return Result.ok();
     }
 
     @Override
     @Transactional
-    public Boolean updateCard(UserCardRelation userCardRelation, Card card) {
-        // Check if the card exists
+    public Result updateCard(UserCardRelation userCardRelation, Card card) {
         if (!relationExists(userCardRelation)) {
-            return false;
+            return Result.fail("Relation does not exist");
         }
 
-        // Implement logic to update the card
-        // Replace with your actual implementation
         userCardRelation.setCard(card);
         userCardRelationRepository.save(userCardRelation);
-        return true;
+        return Result.ok();
     }
 
     @Override
-    public List<Card> getCardByUserId(UserCardRelation userCardRelation) {
+    public List<Card> getCardByUserId(Long id) {
         // Implement logic to retrieve cards by user ID
         List<Card> cards = new ArrayList<>();
         for(UserCardRelation relation : userCardRelationRepository.findAll()) {
-            if(Objects.equals(relation.getUser().getId(), userCardRelation.getUser().getId())) {
+            if(Objects.equals(relation.getUser().getId(), id)) {
                 cards.add(relation.getCard());
             }
         }
         return cards;
     }
+
 
     @Override
     public List<UserCardRelation> getAllUserCardRelation(UserCardRelation userCardRelation) {

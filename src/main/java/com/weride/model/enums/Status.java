@@ -1,4 +1,4 @@
-package com.weride.model;
+package com.weride.model.enums;
 
 public enum Status {
     REQUESTED,

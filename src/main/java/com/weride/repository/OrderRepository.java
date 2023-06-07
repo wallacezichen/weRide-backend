@@ -1,7 +1,7 @@
 package com.weride.repository;
 
 import com.weride.model.Order;
-import com.weride.model.Status;
+import com.weride.model.enums.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
